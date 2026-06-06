@@ -1,0 +1,58 @@
+name: khuctamgiao_app
+description: "A new Flutter project."
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+version: 1.0.0+3
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  flutter_bloc: ^9.1.1
+  go_router: ^17.2.3
+  dio: ^5.9.2
+  cached_network_image: ^3.4.1
+  shared_preferences: ^2.5.5
+  flutter_html: ^3.0.0
+  uuid: ^4.5.3
+  intl: ^0.20.2
+  url_launcher: ^6.3.2
+  package_info_plus: ^10.1.0
+  share_plus: ^13.1.0
+  flutter_local_notifications: ^21.0.0
+  timezone: ^0.11.0
+  flutter_timezone: ^5.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.7
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/logo.jpg
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/logo.jpg
+  remove_alpha_ios: true
+
+flutter_native_splash:
+  color: "#F3F2EE"
+  image: assets/splash_logo.png
+  android: true
+  ios: true
+  android_gravity: center
+  ios_content_mode: scaleAspectFit
+  android_12:
+    color: "#F3F2EE"
+    image: assets/splash_blank.png
+    icon_background_color: "#F3F2EE"

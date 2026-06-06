@@ -1,0 +1,167 @@
+require "shellwords"
+
+default_platform(:ios)
+
+def optional_env(name, default_value = nil)
+  value = ENV[name]
+  value.nil? || value.empty? ? default_value : value
+end
+
+def required_env(name)
+  value = ENV[name]
+  UI.user_error!("Missing required ENV #{name}") if value.nil? || value.empty?
+  value
+end
+
+def dart_define_args
+  api_base_url = optional_env("API_BASE_URL")
+  api_base_url ? "--dart-define=API_BASE_URL=#{Shellwords.escape(api_base_url)}" : ""
+end
+
+def latest_file(pattern)
+  files = Dir[pattern].sort_by { |path| File.mtime(path) }
+  UI.user_error!("No file found for pattern: #{pattern}") if files.empty?
+  files.last
+end
+
+private_lane :ci_checks do
+  sh("flutter pub get")
+  sh("flutter analyze")
+  sh("flutter test")
+end
+
+private_lane :build_android_aab do
+  sh("flutter build appbundle --release #{dart_define_args}".strip)
+  latest_file("build/app/outputs/bundle/release/*.aab")
+end
+
+private_lane :build_android_apk do
+  sh("flutter build apk --release #{dart_define_args}".strip)
+  latest_file("build/app/outputs/flutter-apk/*release*.apk")
+end
+
+private_lane :build_ios_ipa do |options|
+  export_method = options[:export_method] || "app-store"
+  sh("flutter build ipa --release --export-method #{export_method} #{dart_define_args}".strip)
+  latest_file("build/ios/ipa/*.ipa")
+end
+
+desc "Deploy Android and iOS builds to Firebase App Distribution"
+lane :firebase do
+  ci_checks unless optional_env("SKIP_CHECKS") == "1"
+
+  android_artifact = if optional_env("FIREBASE_ANDROID_ARTIFACT", "aab") == "apk"
+    build_android_apk
+  else
+    build_android_aab
+  end
+
+  firebase_app_distribution(
+    app: required_env("FIREBASE_ANDROID_APP_ID"),
+    android_artifact_path: android_artifact,
+    groups: optional_env("FIREBASE_TESTER_GROUPS"),
+    testers: optional_env("FIREBASE_TESTERS"),
+    release_notes: optional_env("RELEASE_NOTES", "CI Firebase build")
+  )
+
+  ipa_path = build_ios_ipa(export_method: optional_env("IOS_FIREBASE_EXPORT_METHOD", "ad-hoc"))
+  firebase_app_distribution(
+    app: required_env("FIREBASE_IOS_APP_ID"),
+    ipa_path: ipa_path,
+    groups: optional_env("FIREBASE_TESTER_GROUPS"),
+    testers: optional_env("FIREBASE_TESTERS"),
+    release_notes: optional_env("RELEASE_NOTES", "CI Firebase build")
+  )
+end
+
+desc "Deploy Android to Google Play and iOS to App Store Connect/TestFlight"
+lane :stores do
+  ci_checks unless optional_env("SKIP_CHECKS") == "1"
+
+  aab_path = build_android_aab
+  upload_to_play_store(
+    aab: aab_path,
+    json_key: required_env("GOOGLE_PLAY_JSON_KEY_PATH"),
+    package_name: optional_env("ANDROID_PACKAGE_NAME", "com.it36vn.khuctamgiao"),
+    track: optional_env("GOOGLE_PLAY_TRACK", "internal"),
+    release_status: optional_env("GOOGLE_PLAY_RELEASE_STATUS", "draft"),
+    skip_upload_metadata: true,
+    skip_upload_changelogs: true,
+    skip_upload_images: true,
+    skip_upload_screenshots: true
+  )
+
+  ipa_path = build_ios_ipa(export_method: optional_env("IOS_STORE_EXPORT_METHOD", "app-store"))
+  upload_to_testflight(
+    ipa: ipa_path,
+    api_key_path: required_env("APP_STORE_CONNECT_API_KEY_PATH"),
+    skip_waiting_for_build_processing: optional_env("SKIP_WAITING_FOR_BUILD_PROCESSING", "true") == "true",
+    distribute_external: optional_env("TESTFLIGHT_DISTRIBUTE_EXTERNAL", "false") == "true",
+    groups: optional_env("TESTFLIGHT_GROUPS")
+  )
+
+  if optional_env("SUBMIT_TO_APP_REVIEW") == "1"
+    deliver(
+      ipa: ipa_path,
+      api_key_path: required_env("APP_STORE_CONNECT_API_KEY_PATH"),
+      submit_for_review: true,
+      automatic_release: optional_env("APP_STORE_AUTOMATIC_RELEASE", "false") == "true",
+      skip_metadata: optional_env("APP_STORE_SKIP_METADATA", "true") == "true",
+      skip_screenshots: optional_env("APP_STORE_SKIP_SCREENSHOTS", "true") == "true",
+      force: true
+    )
+  end
+end
+
+desc "Deploy Android only to Firebase App Distribution"
+lane :firebase_android do
+  ci_checks unless optional_env("SKIP_CHECKS") == "1"
+  artifact = optional_env("FIREBASE_ANDROID_ARTIFACT", "aab") == "apk" ? build_android_apk : build_android_aab
+  firebase_app_distribution(
+    app: required_env("FIREBASE_ANDROID_APP_ID"),
+    android_artifact_path: artifact,
+    groups: optional_env("FIREBASE_TESTER_GROUPS"),
+    testers: optional_env("FIREBASE_TESTERS"),
+    release_notes: optional_env("RELEASE_NOTES", "CI Firebase Android build")
+  )
+end
+
+desc "Deploy iOS only to Firebase App Distribution"
+lane :firebase_ios do
+  ci_checks unless optional_env("SKIP_CHECKS") == "1"
+  ipa_path = build_ios_ipa(export_method: optional_env("IOS_FIREBASE_EXPORT_METHOD", "ad-hoc"))
+  firebase_app_distribution(
+    app: required_env("FIREBASE_IOS_APP_ID"),
+    ipa_path: ipa_path,
+    groups: optional_env("FIREBASE_TESTER_GROUPS"),
+    testers: optional_env("FIREBASE_TESTERS"),
+    release_notes: optional_env("RELEASE_NOTES", "CI Firebase iOS build")
+  )
+end
+
+desc "Deploy Android only to Google Play"
+lane :google_play do
+  ci_checks unless optional_env("SKIP_CHECKS") == "1"
+  upload_to_play_store(
+    aab: build_android_aab,
+    json_key: required_env("GOOGLE_PLAY_JSON_KEY_PATH"),
+    package_name: optional_env("ANDROID_PACKAGE_NAME", "com.it36vn.khuctamgiao"),
+    track: optional_env("GOOGLE_PLAY_TRACK", "internal"),
+    release_status: optional_env("GOOGLE_PLAY_RELEASE_STATUS", "draft"),
+    skip_upload_metadata: true,
+    skip_upload_changelogs: true,
+    skip_upload_images: true,
+    skip_upload_screenshots: true
+  )
+end
+
+desc "Deploy iOS only to TestFlight, optionally submit for App Review"
+lane :apple_store do
+  ci_checks unless optional_env("SKIP_CHECKS") == "1"
+  ipa_path = build_ios_ipa(export_method: optional_env("IOS_STORE_EXPORT_METHOD", "app-store"))
+  upload_to_testflight(
+    ipa: ipa_path,
+    api_key_path: required_env("APP_STORE_CONNECT_API_KEY_PATH"),
+    skip_waiting_for_build_processing: optional_env("SKIP_WAITING_FOR_BUILD_PROCESSING", "true") == "true"
+  )
+end

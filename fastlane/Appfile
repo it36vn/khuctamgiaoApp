@@ -1,0 +1,7 @@
+json_key_file(ENV["GOOGLE_PLAY_JSON_KEY_PATH"]) if ENV["GOOGLE_PLAY_JSON_KEY_PATH"]
+package_name(ENV.fetch("ANDROID_PACKAGE_NAME", "com.it36vn.khuctamgiao"))
+
+app_identifier(ENV.fetch("IOS_BUNDLE_ID", "com.it36vn.khuctamgiao"))
+apple_id(ENV["APPLE_ID"]) if ENV["APPLE_ID"]
+team_id(ENV["APPLE_TEAM_ID"]) if ENV["APPLE_TEAM_ID"]
+itc_team_id(ENV["ASC_TEAM_ID"]) if ENV["ASC_TEAM_ID"]
