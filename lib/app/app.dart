@@ -67,10 +67,6 @@ class _KhucTamGiaoAppState extends State<KhucTamGiaoApp> {
       ],
       child: MaterialApp.router(
         title: 'Khúc Tâm Giao',
-        supportedLocales: const [
-          Locale('en', 'US'),
-          Locale('vi', 'VN'),
-        ],
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
         routerConfig: _appRouter.router,

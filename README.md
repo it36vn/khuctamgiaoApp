@@ -233,7 +233,7 @@ scripts/deploy_stores.sh
 Required Android ENV:
 
 ```bash
-export ANDROID_PACKAGE_NAME=com.it36vn.khuctamgiao
+export ANDROID_PACKAGE_NAME=com.thuongag.khuctamgiao
 export GOOGLE_PLAY_JSON_KEY_PATH=/secure/path/google-play-service-account.json
 export ANDROID_KEYSTORE_PATH=/secure/path/release.keystore
 export ANDROID_KEYSTORE_PASSWORD=...

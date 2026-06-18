@@ -145,7 +145,7 @@ lane :google_play do
   upload_to_play_store(
     aab: build_android_aab,
     json_key: required_env("GOOGLE_PLAY_JSON_KEY_PATH"),
-    package_name: optional_env("ANDROID_PACKAGE_NAME", "com.it36vn.khuctamgiao"),
+    package_name: optional_env("ANDROID_PACKAGE_NAME", "com.thuongag.khuctamgiao"),
     track: optional_env("GOOGLE_PLAY_TRACK", "internal"),
     release_status: optional_env("GOOGLE_PLAY_RELEASE_STATUS", "draft"),
     skip_upload_metadata: true,
